@@ -1,0 +1,31 @@
+# run brownian dynamics on a chain pulled by
+# stretching forces at each end
+
+ACTION BROWNDYN
+
+# chain length (number of beads)
+NBEAD 100
+
+# segment size and persistence length
+LS 1D0
+LP 50D0
+
+# fix first bead and pull on last bead
+FIXBEADs 1
+#EXTFORCE 100 0D0 0D0 1D0
+
+# start from equilibrium configuration
+STARTEQUIL
+
+# dump out snapshots
+SNAPSHOTFILE *.dump.out
+
+# turn off brownian forces
+NOBROWN
+
+# number of simulation steps
+BDSTEPS 1000000
+
+# output frequency
+BDPRINTEVERY 1000
+SNAPSHOTS 1000

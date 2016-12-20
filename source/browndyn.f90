@@ -1,0 +1,122 @@
+MODULE BROWNDYN
+  ! Utilities for running brownian dynamics simulations
+  IMPLICIT NONE
+  
+CONTAINS
+  SUBROUTINE RUNBROWNDYNSIM(CHAINP, NSTEP, DELT,OUTFILE,PRINTEVERY,SNAPSHOTFILE,SNAPSHOTEVERY,APPENDSNAPSHOTS,DOBROWN)
+    ! run a brownian dynamics simulation
+    ! NSTEP: number of steps to simulate
+    ! DELT: timestep
+    ! OUTFILE: output file for printing out info (energy, end position)
+    ! PRINTEVERY: how often to print info into OUTFILE
+    ! SNAPSHOTFILE: file for dumping chain configuration snapshots
+    ! SNAPSHOTEVERY: how often to dump snapshots
+    ! APPENDSNAPSHOTS: append snapshots to existing files (otherwise, start from scratch and append as we go)
+    ! DOBROWN: include brownian forces
+    
+    USE CHAINUTIL, ONLY : CHAIN, GETCHAINENERGY, OUTPUTSNAPSHOT
+    
+    IMPLICIT NONE
+    TYPE(CHAIN), POINTER :: CHAINP
+    INTEGER, INTENT(IN) :: NSTEP
+    DOUBLE PRECISION, INTENT(IN) :: DELT
+    CHARACTER(LEN=*), INTENT(IN) :: OUTFILE, SNAPSHOTFILE
+    INTEGER, INTENT(IN) :: PRINTEVERY, SNAPSHOTEVERY
+    LOGICAL, INTENT(IN) :: APPENDSNAPSHOTS, DOBROWN
+    
+    INTEGER :: STEP
+    DOUBLE PRECISION :: ENERGY, ENERGY0, FORCES(3,CHAINP%NPT)
+    
+    OPEN(FILE=OUTFILE,UNIT=88,STATUS='UNKNOWN')
+    
+    CALL GETCHAINENERGY(CHAINP,ENERGY0,FORCES,.FALSE.)    
+    PRINT*, 'STEP, ENERGY, END POSITION:', 0, ENERGY0, CHAINP%POS(:,CHAINP%NPT)
+    WRITE(88,*), 0, ENERGY0, CHAINP%POS(:,CHAINP%NPT)
+    
+    ! Initial snapshot
+    CALL OUTPUTSNAPSHOT(CHAINP,SNAPSHOTFILE,APPENDSNAPSHOTS)
+    
+    DO STEP = 1,NSTEP
+       CALL LANGEVINSTEPRK4(CHAINP,DELT,ENERGY,DOBROWN)
+
+       IF (MOD(STEP,PRINTEVERY).EQ.0) THEN
+          ! Output information on chain status
+          PRINT*, 'STEP, ENERGY, END POSITION:', STEP, ENERGY, CHAINP%POS(:,CHAINP%NPT)
+          WRITE(88,*), STEP, ENERGY, CHAINP%POS(:,CHAINP%NPT)
+       ENDIF
+
+       IF (MOD(STEP,SNAPSHOTEVERY).EQ.0) THEN          
+          
+          ! output snapshot
+          CALL OUTPUTSNAPSHOT(CHAINP,SNAPSHOTFILE,.TRUE.)
+       ENDIF
+    ENDDO
+
+    CLOSE(88)
+  END SUBROUTINE RUNBROWNDYNSIM
+  
+  SUBROUTINE LANGEVINSTEPRK4(CHAINP,DELT,ENERGY,DOBROWN)
+    ! propagate chain forward in time, using a fourth-order Runge-Kutta method
+    ! DELT: timestep
+    ! ENERGY: returns the final energy of the chain after the step
+    ! DOBROWN: toggle whether to include brownian forces
+    USE MT19937, ONLY : RNORM, GRND
+    USE CHAINUTIL, ONLY : CHAIN, GETCHAINENERGY
+
+    IMPLICIT NONE
+    TYPE(CHAIN), POINTER :: CHAINP
+    DOUBLE PRECISION, INTENT(IN) :: DELT
+    DOUBLE PRECISION, INTENT(OUT) :: ENERGY
+    LOGICAL, INTENT(IN) :: DOBROWN
+    DOUBLE PRECISION :: S2DT
+    DOUBLE PRECISION, DIMENSION(3,CHAINP%NPT) :: POS0, K1POS, K2POS, K3POS, &
+         & K4POS, FORCES, FBROWN
+    INTEGER :: B, I
+
+    S2DT = SQRT(2*CHAINP%KT*CHAINP%FRICT/DELT)
+
+    POS0 = CHAINP%POS
+
+    ! get the brownian forces
+    IF (DOBROWN) THEN     
+       DO B = 1,CHAINP%NPT         
+          DO I = 1,3
+             FBROWN(I,B) = RNORM()*S2DT
+          ENDDO
+       END DO
+    ELSE
+       FBROWN = 0D0
+    ENDIF
+
+    ! --------- 1ST RK STEP---------------
+    CALL GETCHAINENERGY(CHAINP,ENERGY,FORCES,.TRUE.)
+    K1POS = (FBROWN + FORCES)/CHAINP%FRICT
+    IF (CHAINP%NFIX.GT.0) K1POS(:,CHAINP%FIXBEADS(1:CHAINP%NFIX)) = 0D0
+
+    CHAINP%POS = POS0 + DELT/2*K1POS
+
+    ! --------- 2ND RK STEP---------------
+    CALL GETCHAINENERGY(CHAINP,ENERGY,FORCES,.TRUE.)
+    K2POS = (FBROWN + FORCES)/CHAINP%FRICT
+    IF (CHAINP%NFIX.GT.0) K2POS(:,CHAINP%FIXBEADS(1:CHAINP%NFIX)) = 0D0
+    
+    CHAINP%POS = POS0 + DELT/2*K2POS
+
+    ! --------- 3RD RK STEP---------------
+    CALL GETCHAINENERGY(CHAINP,ENERGY,FORCES,.TRUE.)
+    K3POS = (FBROWN + FORCES)/CHAINP%FRICT
+    IF (CHAINP%NFIX.GT.0) K3POS(:,CHAINP%FIXBEADS(1:CHAINP%NFIX)) = 0D0
+    
+    CHAINP%POS = POS0 + DELT*K3POS
+
+    ! --------- 3RD RK STEP---------------
+    CALL GETCHAINENERGY(CHAINP,ENERGY,FORCES,.TRUE.)
+    K4POS = (FBROWN + FORCES)/CHAINP%FRICT
+    IF (CHAINP%NFIX.GT.0) K4POS(:,CHAINP%FIXBEADS(1:CHAINP%NFIX)) = 0D0
+    
+    CHAINP%POS = POS0 + DELT/6*(K1POS + 2*K2POS + 2*K3POS + K4POS)
+
+    ! calculate final energy
+    CALL GETCHAINENERGY(CHAINP,ENERGY,FORCES,.false.)
+  END SUBROUTINE LANGEVINSTEPRK4
+END MODULE BROWNDYN
