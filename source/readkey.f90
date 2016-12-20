@@ -47,7 +47,7 @@ SUBROUTINE READKEY
   NFIX = 0 !number of fixed beads
   
   ! external forces
-  NEXTforce = 0  
+  NEXTFORCE= 0  
 
   ! input/output  
   OUTFILE = '*.out'
@@ -181,6 +181,7 @@ SUBROUTINE READKEY
      ENDDO
      CLOSE(PF)
   ENDDO
+
 
   ! -----------------
   ! check validity of some values, raise errors or adjust as necessary

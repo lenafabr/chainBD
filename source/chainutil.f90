@@ -244,6 +244,10 @@ CONTAINS
     
     IF (NEXTFORCE.GT.0) THEN    
        DO I = 1,NEXTFORCE
+          IF (EXTFORCEIND(I).GT.CHAINP%NPT) THEN
+             PRINT*, 'ERROR IN SETCHAINPARAMS: bad index for extforce', EXTFORCEIND(I)
+             STOP 1
+          ENDIF
           CHAINP%FORCEXT(:,EXTFORCEIND(I)) = EXTFORCE(:,I)
        ENDDO       
     END IF

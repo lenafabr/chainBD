@@ -11,3 +11,13 @@ nconfig = size(data,1)/(data(1,1)+1)
 
 beads = data(end-nbead+1:end,:);
 plot3(beads(:,1),beads(:,2),beads(:,3),'.-')
+
+%% show movie
+b = nbead+1;
+for cc = 1:nconfig
+    beads = data(b*(cc-1)+2:b*cc,:);
+    plot3(beads(:,1),beads(:,2),beads(:,3),'.-')
+    view([1,0,0])
+    drawnow
+    pause(0.1)
+end

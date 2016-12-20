@@ -1,0 +1,34 @@
+# run brownian dynamics on a short gaussian chain
+
+ACTION BROWNDYN
+
+# chain length (number of beads)
+NBEAD 20
+
+# segment size and persistence length
+LS 1D0
+LP 0.01D0
+ESTR 1D0
+
+# timestep
+DELT 1D-3
+
+# fix first bead and pull on last bead
+#FIXBEADs 1
+#EXTFORCE 10 0D0 0D0 10D0
+
+# start from equilibrium configuration
+STARTEQUIL
+
+# dump out snapshots
+SNAPSHOTFILE *.dump.out
+
+# turn off brownian forces
+#NOBROWN
+
+# number of simulation steps
+BDSTEPS 1000000
+
+# output frequency
+BDPRINTEVERY 100
+SNAPSHOTS 10000
