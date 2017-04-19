@@ -27,7 +27,7 @@ SNAPSHOTFILE *.dump.out
 #NOBROWN
 
 # number of simulation steps
-BDSTEPS 1000000
+BDSTEPS 1e6
 
 # output frequency
 BDPRINTEVERY 100
