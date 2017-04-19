@@ -21,3 +21,17 @@ for cc = 1:nconfig
     drawnow
     pause(0.1)
 end
+
+%% look at MSD of end bead over time
+data = dlmread('example.out');
+
+track = data(:,3:5);
+tracklist = {track};
+
+MSD = getMSD(tracklist);
+
+%%
+times = (1:length(MSD))*1e-3*100;
+loglog(times,MSD,times,6*times,times,6*times.^0.5)
+xlabel('time')
+ylabel('MSD')
